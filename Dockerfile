@@ -1,4 +1,5 @@
 FROM alpine:3.19
+LABEL org.opencontainers.image.source=https://github.com/lintune/lintune-backup
 
 RUN apk add --no-cache bash openssh-client jq dcron
 
