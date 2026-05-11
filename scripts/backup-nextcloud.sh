@@ -18,13 +18,5 @@ trap cleanup EXIT
 docker exec -u www-data "$NC" php /var/www/html/occ maintenance:mode --on \
     > /dev/null 2>&1
 
-# Find the Nextcloud data volume on the host and stream it
-DATA_SRC=$(docker inspect "$NC" \
-    --format '{{range .Mounts}}{{if eq .Destination "/var/www/html/data"}}{{.Source}}{{end}}{{end}}')
-
-if [[ -z "$DATA_SRC" ]]; then
-    echo "could not locate nextcloud data volume" >&2
-    exit 1
-fi
-
-tar czf - -C "$(dirname "$DATA_SRC")" "$(basename "$DATA_SRC")" 2>/dev/null
+# Stream data volume from inside the container (avoids host /var/lib/docker/ permission issues)
+docker exec "$NC" tar czf - /mnt/ncdata

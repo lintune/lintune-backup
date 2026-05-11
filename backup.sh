@@ -41,6 +41,7 @@ while IFS= read -r server; do
         tmpfile="${outfile}.tmp"
 
         echo "[backup] $label → $service"
+        errfile="${outfile}.err"
 
         if ssh -i "$KEY" \
                -o BatchMode=yes \
@@ -49,8 +50,9 @@ while IFS= read -r server; do
                -p "$port" \
                "${user}@${host}" \
                'bash -s' < "$SCRIPT_DIR/scripts/backup-${service}.sh" \
-               > "$tmpfile" 2>/dev/null; then
+               > "$tmpfile" 2>"$errfile"; then
 
+            rm -f "$errfile"
             mv "$tmpfile" "$outfile"
             size_bytes=$(stat -c%s "$outfile")
             size_mb=$(( size_bytes / 1048576 ))
@@ -61,11 +63,13 @@ while IFS= read -r server; do
                 '.servers[$id].services[$svc] = {"ok": true, "size_mb": $mb, "file": $f}')
             echo "[backup] $label → $service OK (${size_mb}MB)"
         else
-            rm -f "$tmpfile"
+            ssh_err=$(cat "$errfile" 2>/dev/null | head -5 | tr '\n' ' ' | sed 's/[[:space:]]*$//')
+            rm -f "$tmpfile" "$errfile"
+            echo "[backup] $label → $service FAILED: ${ssh_err:-no error output}"
             result=$(echo "$result" | jq \
                 --arg id "$server_id" --arg svc "$service" \
-                '.servers[$id].services[$svc] = {"ok": false, "error": "backup failed"}')
-            echo "[backup] $label → $service FAILED"
+                --arg err "${ssh_err:-backup failed}" \
+                '.servers[$id].services[$svc] = {"ok": false, "error": $err}')
         fi
 
     done < <(echo "$server" | jq -r '.services[]')

@@ -10,7 +10,7 @@ if [[ -z "$MARIADB" ]]; then
     exit 1
 fi
 
-# $MYSQL_ROOT_PASSWORD expands inside the container, not here
+# $MYSQL_USER/$MYSQL_PASSWORD expand inside the container, not here
 docker exec "$MARIADB" sh -c \
-    'mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" --databases keycloak 2>/dev/null' \
+    'mysqldump -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" --databases keycloak' \
     | gzip

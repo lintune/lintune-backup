@@ -1,17 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-MAILCOW_DIR="/opt/mailcow-dockerized"
-TMPDIR=$(mktemp -d)
-trap "rm -rf '$TMPDIR'" EXIT
-
-if [[ ! -d "$MAILCOW_DIR" ]]; then
-    echo "mailcow directory not found at $MAILCOW_DIR" >&2
+# The wrapper script runs everything as root (needed to read mailcow.conf and
+# clean up root-owned backup files). See SshInstaller::setupBackupUser().
+if [[ ! -f /usr/local/sbin/lintune-mailcow-backup.sh ]]; then
+    echo "mailcow backup wrapper not found at /usr/local/sbin/lintune-mailcow-backup.sh" >&2
     exit 1
 fi
 
-cd "$MAILCOW_DIR"
-MAILCOW_BACKUP_LOCATION="$TMPDIR" bash helper-scripts/backup_and_restore.sh backup all \
-    > /dev/null 2>&1
-
-tar czf - -C "$TMPDIR" .
+sudo -n /usr/local/sbin/lintune-mailcow-backup.sh

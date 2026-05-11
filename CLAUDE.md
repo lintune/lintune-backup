@@ -52,8 +52,9 @@ Scripts are versioned inside the container image — all servers always get the 
 ```
 
 ## Shared volume (single mount, both containers)
-Host path: `/opt/lintune-backup/data`
+Host path: `/opt/lintune/backup-data`
 Mounted as `/backups` in lintune-backup, `/var/lintune-backup` in lintune-admin.
+Backup archives stored at `/opt/lintune/backups` (host), mounted as `/storage` in lintune-backup.
 
 Files written by **lintune-admin**:
 - `backup_now` — trigger immediate backup
@@ -67,9 +68,11 @@ Files written by **lintune-backup**:
 ## SSH key lifecycle
 1. PHP generates RSA keypair at the first install stage IF backup is enabled
 2. Private key stored encrypted in `settings` table: `Setting::set('backup.private_key', $key, true)`
-3. Private key written to `/opt/lintune-backup/data/id_backup` (the shared volume) at setup
+3. Private key written to `/opt/lintune/backup-data/id_backup` (the shared volume) at setup
 4. Public key pushed to each service server via the SSH connection already open during that stage
 5. On each service server: `lintune-backup` system user created, added to `docker` group, public key in `~/.ssh/authorized_keys`
+6. `/etc/sudoers.d/lintune-backup` written: `NOPASSWD: !use_pty:` for `/usr/local/sbin/lintune-mailcow-backup.sh` — mailcow needs root to read `mailcow.conf` (root:root 600). `!use_pty` is critical: the global `Defaults use_pty` in sudoers severs stdout; without it, the tar stream never reaches the backup container.
+7. `/usr/local/sbin/lintune-mailcow-backup.sh` written on the service server — runs `backup_and_restore.sh` + tars the result to stdout. Uses `MCTMP` (not `TMPDIR`) because `TMPDIR` is a Unix standard env var that `backup_and_restore.sh` would inherit and use as its own temp dir location, corrupting the backup path.
 
 ## Cron schedule
 - Default: `0 2 * * *`
