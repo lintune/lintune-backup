@@ -134,3 +134,4 @@ When an MSP adds a new service after initial setup (Settings → "Add new [servi
 - Manual backup user setup for existing/self-installed services → settings redesign backlog
 - Retention policy (keep-last-N) — not yet designed
 - Failure notifications (email/webhook) — not yet designed
+- **Enforce root SSH in installer UI** — validate that the SSH user is `root` (or surface a clear error). Passwordless sudo is not supported; the installer pipes scripts directly over SSH with no mechanism to feed a sudo password.
